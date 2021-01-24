@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<APIProxy revision="1" name="Petstore">
+    <Basepaths>/petstore</Basepaths>
+    <ConfigurationVersion majorVersion="4" minorVersion="0"/>
+    <CreatedAt>1610919168354</CreatedAt>
+    <CreatedBy>jasonmscollins@gmail.com</CreatedBy>
+    <Description>This is a sample server Petstore server.  You can find out more about Swagger at [http://swagger.io](http://swagger.io) or on [irc.freenode.net, #swagger](http://swagger.io/irc/).  For this sample, you can use the api key `special-key` to test the authorization filters.</Description>
+    <DisplayName>Petstore</DisplayName>
+    <LastModifiedAt>1610919168354</LastModifiedAt>
+    <LastModifiedBy>jasonmscollins@gmail.com</LastModifiedBy>
+    <ManifestVersion>SHA-512:a78c5816e6eaa44d786bf342cf1e3cae1dfcdbb4e56f95266132438100d09364f3f34e5b828f7e8a5de9574701b6e33fdc099647ff13d0fb42b0b855e15006e0:us-east-1</ManifestVersion>
+    <Policies>
+        <Policy>remove-query-param-apikey</Policy>
+        <Policy>verify-api-key</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <Resources/>
+    <Spec></Spec>
+    <TargetServers/>
+    <TargetEndpoints/>
+</APIProxy>
