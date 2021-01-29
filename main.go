@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -8,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-openapi/spec"
+	"github.com/getkin/kin-openapi/openapi3"
 )
 
 func main() {
@@ -26,22 +27,16 @@ func main() {
 	var proxy APIProxy
 	xml.Unmarshal(byteValue, &proxy)
 
-	// Create teh paths object
-
-	swagger := spec.SwaggerProps{
-		BasePath: proxy.Basepaths,
-		Info: &spec.Info{
-			InfoProps: spec.InfoProps{
-				Description: proxy.Description,
-				Version:     proxy.Version.Major + "." + proxy.Version.Minor,
-			},
+	// Create the spec object
+	spec := openapi3.Swagger{
+		OpenAPI: "3.1.0",
+		Info: &openapi3.Info{
+			Title:       proxy.DisplayName,
+			Description: proxy.Description,
+			Version:     proxy.Version.Major + "." + proxy.Version.Minor,
 		},
-		Paths: &spec.Paths{
-			Paths: map[string]spec.PathItem{},
-		},
+		Paths: openapi3.Paths{},
 	}
-
-	paths := swagger.Paths
 
 	// Load the endpoint files
 	for _, endpointFilename := range proxy.ProxyEndpoints.ProxyEndpoint {
@@ -59,12 +54,10 @@ func main() {
 
 		for _, flow := range endpoint.Flows.Flow {
 			var verb, urlPath string
-			operation := spec.Operation{
-				OperationProps: spec.OperationProps{
-					ID:          flow.Name,
-					Description: flow.Description,
-					Summary:     flow.Description,
-				},
+			operation := openapi3.Operation{
+				OperationID: flow.Name,
+				Description: flow.Description,
+				Summary:     flow.Description,
 			}
 			for _, condition := range flow.Conditions.Condition {
 				if condition.Variable == "proxy.pathsuffix" && condition.Operator == "MatchesPath" {
@@ -73,8 +66,15 @@ func main() {
 					pathComponents := strings.Split(urlPath, "/")
 					for i, pathComponent := range pathComponents {
 						if pathComponent == "*" {
+							paramName := pathComponents[i-1] + "Id"
 							// This is a * part of the url, change it to a variable name based on previous component
-							pathComponents[i] = "{" + pathComponents[i-1] + "Id}"
+							pathComponents[i] = "{" + paramName + "}"
+							operation.AddParameter(&openapi3.Parameter{
+								In:       openapi3.ParameterInPath,
+								Name:     paramName,
+								Schema:   openapi3.NewSchemaRef("string", openapi3.NewStringSchema()),
+								Required: true,
+							})
 						}
 					}
 					urlPath = strings.Join(pathComponents, "/")
@@ -83,31 +83,22 @@ func main() {
 
 				}
 			}
-			pathProps := spec.PathItemProps{}
-			if currentProps, ok := paths.Paths[urlPath]; ok {
-				pathProps = currentProps.PathItemProps
-			}
+			operation.AddResponse(200, &openapi3.Response{
+				Description: &flow.Description,
+			})
 
-			switch strings.ToUpper(verb) {
-			case "GET":
-				pathProps.Get = &operation
-			case "PUT":
-				pathProps.Put = &operation
-			case "POST":
-				pathProps.Post = &operation
-			case "DELETE":
-				pathProps.Delete = &operation
-			}
-
-			paths.Paths[urlPath] = spec.PathItem{
-				PathItemProps: pathProps,
-			}
+			spec.AddOperation(urlPath, verb, &operation)
 
 		}
 		proxy.parsedEndpoints = append(proxy.parsedEndpoints, endpoint)
 	}
 
-	swaggerBytes, _ := json.Marshal(swagger)
+	swaggerBytes, _ := json.Marshal(spec)
 
 	fmt.Println(string(swaggerBytes))
+
+	err = spec.Validate(context.Background())
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 }
